@@ -10,11 +10,19 @@ function buildIndex(logs: WeeklyLog[]) {
   return m
 }
 
-/** Volumen de una entrada = series × reps × kg (0 si es peso corporal sin lastre) */
+/** Volumen de una entrada = reps × Σ(kg de cada serie) (0 si es peso corporal sin lastre) */
 function volumenEntrada(log: WeeklyLog): number {
   const ex = getExercise(log.ejercicio)
   if (!ex) return 0
-  return ex.series * ex.reps * log.peso
+  const totalKg = (log.pesos ?? []).reduce((a, b) => a + (b || 0), 0)
+  return ex.reps * totalKg
+}
+
+/** Peso "de trabajo" de una entrada = la serie más pesada registrada. */
+function pesoTrabajo(log: WeeklyLog | undefined): number | null {
+  if (!log || !log.pesos || log.pesos.length === 0) return null
+  const max = Math.max(...log.pesos)
+  return Number.isFinite(max) ? max : null
 }
 
 export interface Kpis {
@@ -57,9 +65,10 @@ export function computeKpis(logs: WeeklyLog[]): Kpis {
     for (let s = 1; s <= TOTAL_WEEKS; s++) {
       const day = ROUTINE.find((d) => d.ejercicios.some((e) => e.id === ex.id))!
       const found = index.get(keyOf(s, day.id, ex.id))
-      if (found) {
-        if (primero === null) primero = found.peso
-        ultimo = found.peso
+      const pt = pesoTrabajo(found)
+      if (pt !== null) {
+        if (primero === null) primero = pt
+        ultimo = pt
       }
     }
     if (primero !== null && ultimo !== null) {
@@ -100,8 +109,8 @@ export function progresionEjercicio(
   )
   const out: { semana: string; peso: number | null }[] = []
   for (let s = 1; s <= TOTAL_WEEKS; s++) {
-    const found = day && index.get(keyOf(s, day.id, ejercicioId))
-    out.push({ semana: `S${s}`, peso: found ? found.peso : null })
+    const found = day ? index.get(keyOf(s, day.id, ejercicioId)) : undefined
+    out.push({ semana: `S${s}`, peso: pesoTrabajo(found) })
   }
   return out
 }
@@ -143,7 +152,7 @@ export function historialMatriz(logs: WeeklyLog[]) {
       ex,
       pesos: semanasConDatos.map((s) => {
         const f = index.get(keyOf(s, day.id, ex.id))
-        return f ? f.peso : null
+        return pesoTrabajo(f)
       }),
     })),
   }))

@@ -134,6 +134,17 @@ export function ProgresoView() {
         </p>
       </div>
 
+      {logs.length === 0 && (
+        <Card className="p-4">
+          <p className="text-sm font-semibold">Todavía no hay registros</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Cargá tus pesos en la pestaña Rutina y acá vas a ver tu progreso
+            semanal y mensual. Si querés ver cómo se ve con datos, podés cargar
+            el ejemplo desde Config.
+          </p>
+        </Card>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3">
         <KpiCard

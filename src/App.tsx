@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { Dumbbell, BarChart3, Settings, Moon, Sun } from 'lucide-react'
+import { Dumbbell, BarChart3, Settings, Moon, Sun, UtensilsCrossed } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/hooks/useTheme'
 import { RutinaView } from '@/components/RutinaView'
 import { ProgresoView } from '@/components/ProgresoView'
+import { ComidasView } from '@/components/ComidasView'
 import { ConfigView } from '@/components/ConfigView'
 
-type View = 'rutina' | 'progreso' | 'config'
+type View = 'rutina' | 'progreso' | 'comidas' | 'config'
 
 const NAV: { id: View; label: string; icon: typeof Dumbbell }[] = [
   { id: 'rutina', label: 'Rutina', icon: Dumbbell },
   { id: 'progreso', label: 'Progreso', icon: BarChart3 },
+  { id: 'comidas', label: 'Comidas', icon: UtensilsCrossed },
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
@@ -96,6 +98,7 @@ export default function App() {
             >
               {view === 'rutina' && <RutinaView />}
               {view === 'progreso' && <ProgresoView />}
+              {view === 'comidas' && <ComidasView />}
               {view === 'config' && (
                 <ConfigView theme={theme} onToggleTheme={toggle} />
               )}
@@ -106,7 +109,7 @@ export default function App() {
 
       {/* Bottom nav mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-3 px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid max-w-md grid-cols-4 px-2 pb-[env(safe-area-inset-bottom)]">
           {NAV.map(({ id, label, icon: Icon }) => (
             <button
               key={id}

@@ -93,15 +93,18 @@ export function RutinaView() {
           className="space-y-4"
         >
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-extrabold">{day.nombre}</h2>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-extrabold">{day.titulo}</h2>
                 <Badge
                   variant={day.tipo === 'FUERZA' ? 'fuerza' : 'hipertrofia'}
                 >
                   {day.tipo}
                 </Badge>
               </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                {day.nombre}
+              </p>
               <p className="mt-0.5 text-sm text-muted-foreground">{day.foco}</p>
             </div>
             <div className="text-right">
@@ -124,16 +127,29 @@ export function RutinaView() {
             }
           />
 
-          {/* Ejercicios */}
+          {/* Ejercicios agrupados por grupo muscular */}
           <div className="space-y-2.5">
-            {day.ejercicios.map((ex) => (
-              <ExerciseCard
-                key={ex.id}
-                exercise={ex}
-                semana={semana}
-                dia={diaId}
-              />
-            ))}
+            {day.ejercicios.map((ex, i) => {
+              const nuevoGrupo = i === 0 || day.ejercicios[i - 1].grupo !== ex.grupo
+              return (
+                <div key={ex.id} className="space-y-2.5">
+                  {nuevoGrupo && (
+                    <div className="flex items-center gap-2 px-1 pt-1.5">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+                        {ex.grupo}
+                      </span>
+                      {ex.destacado && (
+                        <span title="Prioridad" className="text-amber-500">
+                          ★
+                        </span>
+                      )}
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                  )}
+                  <ExerciseCard exercise={ex} semana={semana} dia={diaId} />
+                </div>
+              )
+            })}
           </div>
         </motion.div>
       </AnimatePresence>

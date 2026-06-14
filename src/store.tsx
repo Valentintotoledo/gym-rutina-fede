@@ -12,7 +12,7 @@ import { ALL_EXERCISES, getExercise, ROUTINE } from './data/routine'
 import { loadLogs, saveLogs, resetToMock } from './lib/storage'
 
 interface EntryView {
-  peso: number
+  pesos: number[]
   completado: boolean
   fecha: string
   /** true si el peso proviene de un registro guardado para esa semana */
@@ -21,9 +21,16 @@ interface EntryView {
 
 interface GymContextValue {
   logs: WeeklyLog[]
-  /** Devuelve el registro (con peso sugerido si no existe) */
+  /** Devuelve el registro (con pesos sugeridos si no existe) */
   getEntry: (semana: number, dia: DayId, ejercicio: string) => EntryView
-  setPeso: (semana: number, dia: DayId, ejercicio: string, peso: number) => void
+  /** Cambia el peso de una serie puntual */
+  setPesoSerie: (
+    semana: number,
+    dia: DayId,
+    ejercicio: string,
+    serie: number,
+    peso: number
+  ) => void
   setCompletado: (
     semana: number,
     dia: DayId,
@@ -40,6 +47,13 @@ const GymContext = createContext<GymContextValue | null>(null)
 
 function keyOf(semana: number, dia: DayId, ejercicio: string) {
   return `${semana}|${dia}|${ejercicio}`
+}
+
+/** Ajusta un array de pesos al número de series del ejercicio (rellena/recorta). */
+function normalizePesos(pesos: number[] | undefined, series: number, fill: number): number[] {
+  const out = new Array(series).fill(fill)
+  if (pesos) for (let i = 0; i < series && i < pesos.length; i++) out[i] = pesos[i]
+  return out
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -61,7 +75,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveLogs(next)
   }, [])
 
-  /** Peso sugerido: último peso registrado en semanas anteriores, o el base. */
+  /** Peso sugerido por serie: máximo registrado en semanas anteriores, o el base. */
   const pesoSugerido = useCallback(
     (semana: number, ejercicio: string): number => {
       const ex = getExercise(ejercicio)
@@ -69,7 +83,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       for (let w = semana - 1; w >= 1; w--) {
         for (const day of ROUTINE) {
           const found = index.get(keyOf(w, day.id, ejercicio))
-          if (found) return found.peso
+          if (found && found.pesos.length) return Math.max(...found.pesos)
         }
       }
       return ex?.pesoBase ?? 0
@@ -79,17 +93,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getEntry = useCallback(
     (semana: number, dia: DayId, ejercicio: string): EntryView => {
+      const ex = getExercise(ejercicio)
+      const series = ex?.series ?? 1
       const found = index.get(keyOf(semana, dia, ejercicio))
       if (found) {
         return {
-          peso: found.peso,
+          pesos: normalizePesos(found.pesos, series, pesoSugerido(semana, ejercicio)),
           completado: found.completado,
           fecha: found.fecha,
           registrado: true,
         }
       }
       return {
-        peso: pesoSugerido(semana, ejercicio),
+        pesos: normalizePesos(undefined, series, pesoSugerido(semana, ejercicio)),
         completado: false,
         fecha: '',
         registrado: false,
@@ -105,13 +121,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ejercicio: string,
       patch: Partial<WeeklyLog>
     ) => {
+      const ex = getExercise(ejercicio)
+      const series = ex?.series ?? 1
       const k = keyOf(semana, dia, ejercicio)
       const existing = index.get(k)
       const base: WeeklyLog = existing ?? {
         semana,
         dia,
         ejercicio,
-        peso: pesoSugerido(semana, ejercicio),
+        pesos: normalizePesos(undefined, series, pesoSugerido(semana, ejercicio)),
         completado: false,
         fecha: new Date().toISOString(),
       }
@@ -124,11 +142,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [index, logs, persist, pesoSugerido]
   )
 
-  const setPeso = useCallback(
-    (semana: number, dia: DayId, ejercicio: string, peso: number) => {
-      upsert(semana, dia, ejercicio, { peso: Math.max(0, peso) })
+  const setPesoSerie = useCallback(
+    (
+      semana: number,
+      dia: DayId,
+      ejercicio: string,
+      serie: number,
+      peso: number
+    ) => {
+      const ex = getExercise(ejercicio)
+      const series = ex?.series ?? 1
+      const actual = getEntry(semana, dia, ejercicio).pesos
+      const pesos = normalizePesos(actual, series, 0)
+      if (serie >= 0 && serie < pesos.length) pesos[serie] = Math.max(0, peso)
+      upsert(semana, dia, ejercicio, { pesos })
     },
-    [upsert]
+    [getEntry, upsert]
   )
 
   const setCompletado = useCallback(
@@ -158,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             semana,
             dia,
             ejercicio: ex.id,
-            peso: pesoSugerido(semana, ex.id),
+            pesos: normalizePesos(undefined, ex.series, pesoSugerido(semana, ex.id)),
             completado: true,
             fecha,
           })
@@ -187,7 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value: GymContextValue = {
     logs,
     getEntry,
-    setPeso,
+    setPesoSerie,
     setCompletado,
     guardarDia,
     isDiaCompleto,

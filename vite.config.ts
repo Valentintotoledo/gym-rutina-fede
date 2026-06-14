@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
 export default defineConfig({
-  base: '/',
+  // Relativo: funciona tanto en Render (raíz) como en GitHub Pages (subcarpeta)
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

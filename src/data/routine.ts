@@ -1,7 +1,7 @@
 import type { Day, Exercise } from '../types'
 
 /**
- * Rutina de Fede — 5 días.
+ * Rutina de Juan — 5 días.
  * Días 1-2 → FUERZA · Días 3-5 → HIPERTROFIA.
  * Ejercicios, orden, series×reps y notas tomados de la planilla RUTINA_5DIAS_HIPER.
  */

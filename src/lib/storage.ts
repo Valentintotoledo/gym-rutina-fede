@@ -13,7 +13,7 @@ function read(): WeeklyLog[] | null {
   }
 }
 
-/** Carga los logs guardados. Arranca vacío: Fede registra sus pesos reales. */
+/** Carga los logs guardados. Arranca vacío: Juan registra sus pesos reales. */
 export function loadLogs(): WeeklyLog[] {
   return read() ?? []
 }

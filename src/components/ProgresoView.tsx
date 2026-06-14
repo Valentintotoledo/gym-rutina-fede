@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/card'
+import { TOTAL_WEEKS, type WeeklyLog } from '@/types'
 import { ALL_EXERCISES } from '@/data/routine'
 import {
   computeKpis,
@@ -94,19 +95,37 @@ function ChartCard({
   )
 }
 
+const MESES = Math.ceil(TOTAL_WEEKS / 4)
+
+type Periodo = 'todo' | 'mes' | 'semana'
+
 export function ProgresoView() {
   const { logs } = useGym()
   const isDark = useIsDark()
   const [ejercicioId, setEjercicioId] = useState(ALL_EXERCISES[0].id)
+  const [periodo, setPeriodo] = useState<Periodo>('todo')
+  const [selSemana, setSelSemana] = useState(1)
+  const [selMes, setSelMes] = useState(1)
 
-  const kpis = useMemo(() => computeKpis(logs), [logs])
-  const volSemana = useMemo(() => volumenPorSemana(logs), [logs])
-  const distrib = useMemo(() => distribucionPorTipo(logs), [logs])
+  // Logs filtrados por el período elegido (las KPIs y barras se recalculan sobre esto)
+  const filteredLogs = useMemo<WeeklyLog[]>(() => {
+    if (periodo === 'semana') return logs.filter((l) => l.semana === selSemana)
+    if (periodo === 'mes') {
+      const ini = (selMes - 1) * 4 + 1
+      return logs.filter((l) => l.semana >= ini && l.semana <= ini + 3)
+    }
+    return logs
+  }, [logs, periodo, selSemana, selMes])
+
+  const kpis = useMemo(() => computeKpis(filteredLogs), [filteredLogs])
+  const volSemana = useMemo(() => volumenPorSemana(filteredLogs), [filteredLogs])
+  const distrib = useMemo(() => distribucionPorTipo(filteredLogs), [filteredLogs])
+  // La evolución de peso siempre muestra todas las semanas (es una serie temporal)
   const progresion = useMemo(
     () => progresionEjercicio(logs, ejercicioId),
     [logs, ejercicioId]
   )
-  const historial = useMemo(() => historialMatriz(logs), [logs])
+  const historial = useMemo(() => historialMatriz(filteredLogs), [filteredLogs])
 
   const gridColor = isDark ? '#1e293b' : '#e2e8f0'
   const tickColor = isDark ? '#94a3b8' : '#64748b'
@@ -132,6 +151,51 @@ export function ProgresoView() {
         <p className="text-sm text-muted-foreground">
           Tu evolución semana a semana
         </p>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-1.5">
+          {(['todo', 'mes', 'semana'] as Periodo[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriodo(p)}
+              className={`rounded-lg py-2 text-sm font-bold capitalize transition-colors ${
+                periodo === p
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-card text-muted-foreground hover:bg-secondary'
+              }`}
+            >
+              {p === 'todo' ? 'Todo' : p === 'mes' ? 'Por mes' : 'Por semana'}
+            </button>
+          ))}
+        </div>
+        {periodo === 'semana' && (
+          <select
+            value={selSemana}
+            onChange={(e) => setSelSemana(Number(e.target.value))}
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {Array.from({ length: TOTAL_WEEKS }, (_, i) => i + 1).map((s) => (
+              <option key={s} value={s}>
+                Semana {s}
+              </option>
+            ))}
+          </select>
+        )}
+        {periodo === 'mes' && (
+          <select
+            value={selMes}
+            onChange={(e) => setSelMes(Number(e.target.value))}
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {Array.from({ length: MESES }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>
+                Mes {m} (semanas {(m - 1) * 4 + 1}-{m * 4})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {logs.length === 0 && (

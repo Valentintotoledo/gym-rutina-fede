@@ -130,7 +130,7 @@ export function ConfigView({
         <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
           <li>Rutina de 5 días · {totalEjercicios} ejercicios</li>
           <li>Datos guardados en este dispositivo (localStorage)</li>
-          <li>Hecha a medida para Fede 💪</li>
+          <li>Hecha a medida para Juan 💪</li>
         </ul>
         <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/70">
           <Github className="h-3.5 w-3.5" /> Mi Rutina · v0.1.0

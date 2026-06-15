@@ -10,10 +10,12 @@ function buildIndex(logs: WeeklyLog[]) {
   return m
 }
 
-/** Volumen de una entrada = reps × Σ(kg de cada serie) (0 si es peso corporal sin lastre) */
+/** Volumen de una entrada = reps × Σ(kg de cada serie) (0 si se registra en reps / peso corporal) */
 function volumenEntrada(log: WeeklyLog): number {
   const ex = getExercise(log.ejercicio)
   if (!ex) return 0
+  // Los ejercicios contados en repeticiones (o peso corporal) no suman volumen por carga
+  if (ex.unidad === 'reps' || ex.pesoCorporal) return 0
   const totalKg = (log.pesos ?? []).reduce((a, b) => a + (b || 0), 0)
   return ex.reps * totalKg
 }

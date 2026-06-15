@@ -20,10 +20,17 @@ export function useComidas() {
   }, [])
 
   const addEntry = useCallback(
-    (descripcion: string, foto?: string) => {
+    (
+      comida: string,
+      comidaLabel: string,
+      descripcion: string,
+      foto?: string
+    ) => {
       const entry: FoodEntry = {
         id: `${Date.now()}-${Math.round(Math.random() * 1e6)}`,
         fecha: new Date().toISOString(),
+        comida,
+        comidaLabel,
         descripcion: descripcion.trim(),
         foto,
       }

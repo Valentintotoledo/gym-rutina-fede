@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Moon, RotateCcw, Sun, Trash2, Github } from 'lucide-react'
+import { LogOut, Moon, RotateCcw, Sun, Trash2, Github } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useGym } from '@/store'
@@ -9,9 +9,11 @@ import { ROUTINE } from '@/data/routine'
 export function ConfigView({
   theme,
   onToggleTheme,
+  onLogout,
 }: {
   theme: 'light' | 'dark'
   onToggleTheme: () => void
+  onLogout: () => void
 }) {
   const { resetMock } = useGym()
   const [confirmReset, setConfirmReset] = useState(false)
@@ -122,6 +124,17 @@ export function ConfigView({
             </Button>
           )}
         </div>
+      </Card>
+
+      {/* Sesión */}
+      <Card className="p-4">
+        <p className="font-semibold">Sesión</p>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Cerrá la sesión en este dispositivo.
+        </p>
+        <Button variant="outline" size="sm" onClick={onLogout}>
+          <LogOut className="h-4 w-4" /> Cerrar sesión
+        </Button>
       </Card>
 
       {/* Info */}

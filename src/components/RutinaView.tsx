@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { Check, Save } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ROUTINE, todayDayId } from '@/data/routine'
-import { MOCK_WEEKS, TOTAL_WEEKS, type DayId } from '@/types'
+import { TOTAL_WEEKS, type DayId } from '@/types'
+import { currentWeek } from '@/lib/week'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,9 +14,7 @@ import { useGym } from '@/store'
 
 export function RutinaView() {
   const { getEntry, guardarDia } = useGym()
-  const [semana, setSemana] = useState(() =>
-    Math.min(MOCK_WEEKS + 1, TOTAL_WEEKS)
-  )
+  const [semana, setSemana] = useState(() => currentWeek())
   const [diaId, setDiaId] = useState<DayId>(() => todayDayId())
   const [justSaved, setJustSaved] = useState(false)
 

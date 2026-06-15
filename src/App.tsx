@@ -17,6 +17,8 @@ import { ProgresoView } from '@/components/ProgresoView'
 import { ReportesView } from '@/components/ReportesView'
 import { ComidasView } from '@/components/ComidasView'
 import { ConfigView } from '@/components/ConfigView'
+import { Login } from '@/components/Login'
+import { isAuthed, logout } from '@/lib/auth'
 
 type View = 'rutina' | 'progreso' | 'reportes' | 'comidas' | 'config'
 
@@ -30,7 +32,17 @@ const NAV: { id: View; label: string; icon: typeof Dumbbell }[] = [
 
 export default function App() {
   const [view, setView] = useState<View>('rutina')
+  const [authed, setAuthed] = useState(() => isAuthed())
   const { theme, toggle } = useTheme()
+
+  if (!authed) {
+    return <Login onLogin={() => setAuthed(true)} />
+  }
+
+  const onLogout = () => {
+    logout()
+    setAuthed(false)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,7 +123,11 @@ export default function App() {
               {view === 'reportes' && <ReportesView />}
               {view === 'comidas' && <ComidasView />}
               {view === 'config' && (
-                <ConfigView theme={theme} onToggleTheme={toggle} />
+                <ConfigView
+                  theme={theme}
+                  onToggleTheme={toggle}
+                  onLogout={onLogout}
+                />
               )}
             </motion.div>
           </AnimatePresence>

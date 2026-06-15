@@ -4,8 +4,6 @@ import type { DayId, Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 import { useGym } from '@/store'
 
-const STEP = 2.5
-
 function round(n: number) {
   return Math.round(n * 100) / 100
 }
@@ -27,6 +25,9 @@ export function ExerciseCard({
 }) {
   const { getEntry, setPesoSerie, setCompletado } = useGym()
   const entry = getEntry(semana, dia, exercise.id)
+  const step = exercise.step ?? 2.5
+  const unidad: 'kg' | 'reps' =
+    exercise.unidad ?? (exercise.pesoCorporal ? 'reps' : 'kg')
 
   return (
     <motion.div
@@ -97,7 +98,8 @@ export function ExerciseCard({
             key={i}
             serie={i + 1}
             peso={peso}
-            corporal={exercise.pesoCorporal}
+            unidad={unidad}
+            step={step}
             onChange={(v) => setPesoSerie(semana, dia, exercise.id, i, v)}
           />
         ))}
@@ -109,14 +111,17 @@ export function ExerciseCard({
 function SetInput({
   serie,
   peso,
-  corporal,
+  unidad,
+  step,
   onChange,
 }: {
   serie: number
   peso: number
-  corporal?: boolean
+  unidad: 'kg' | 'reps'
+  step: number
   onChange: (peso: number) => void
 }) {
+  const suffix = unidad === 'reps' ? 'reps' : 'kg'
   return (
     <div className="rounded-xl border border-border bg-background/60 p-2">
       <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -125,8 +130,8 @@ function SetInput({
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => onChange(Math.max(0, round(peso - STEP)))}
-          aria-label={`Restar ${STEP} kg a serie ${serie}`}
+          onClick={() => onChange(Math.max(0, round(peso - step)))}
+          aria-label={`Restar ${step} ${suffix} a serie ${serie}`}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:text-foreground active:scale-95"
         >
           <Minus className="h-4 w-4" />
@@ -135,19 +140,19 @@ function SetInput({
           <input
             type="number"
             inputMode="decimal"
-            step={STEP}
+            step={step}
             value={Number.isFinite(peso) ? peso : 0}
             onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-            className="h-8 w-full rounded-lg border border-input bg-background pr-6 text-center text-base font-bold tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-8 w-full rounded-lg border border-input bg-background pr-8 text-center text-base font-bold tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground">
-            {corporal ? '' : 'kg'}
+            {suffix}
           </span>
         </div>
         <button
           type="button"
-          onClick={() => onChange(round(peso + STEP))}
-          aria-label={`Sumar ${STEP} kg a serie ${serie}`}
+          onClick={() => onChange(round(peso + step))}
+          aria-label={`Sumar ${step} ${suffix} a serie ${serie}`}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:text-foreground active:scale-95"
         >
           <Plus className="h-4 w-4" />

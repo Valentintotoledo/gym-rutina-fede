@@ -1,6 +1,9 @@
 export const TOTAL_WEEKS = 12
 export const MOCK_WEEKS = 4
 
+/** Fecha de inicio del plan (semana 1 arranca este día). */
+export const START_DATE = '2026-06-15'
+
 export type DayId = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes'
 
 export type TrainingType = 'FUERZA' | 'HIPERTROFIA'
@@ -23,6 +26,10 @@ export interface Exercise {
   pesoBase: number
   /** true para ejercicios de peso corporal / isométricos (no suman volumen por carga) */
   pesoCorporal?: boolean
+  /** Unidad del registro: 'kg' (default) o 'reps' (cantidad de repeticiones) */
+  unidad?: 'kg' | 'reps'
+  /** Incremento de los botones +/- (default 2.5) */
+  step?: number
 }
 
 export interface Day {

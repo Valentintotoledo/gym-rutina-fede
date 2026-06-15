@@ -12,8 +12,11 @@ import {
   reporteMes,
   textoReporteSemana,
   textoReporteMes,
-  descargarTexto,
 } from '@/lib/report'
+import {
+  exportarReporteSemanaPDF,
+  exportarReporteMesPDF,
+} from '@/lib/reportPdf'
 
 const MESES = Math.ceil(TOTAL_WEEKS / 4)
 
@@ -50,11 +53,11 @@ export function ReportesView() {
   )
 
   const onDescargar = () => {
-    const nombre =
-      modo === 'semanal'
-        ? `reporte-semana-${semana}.txt`
-        : `reporte-mes-${mes}.txt`
-    descargarTexto(nombre, texto)
+    if (modo === 'semanal') {
+      exportarReporteSemanaPDF(repSemana, comidas.length)
+    } else {
+      exportarReporteMesPDF(repMes, comidas.length)
+    }
   }
 
   const onCopiar = async () => {
@@ -134,7 +137,7 @@ export function ReportesView() {
       {/* Acciones */}
       <div className="flex gap-2">
         <Button onClick={onDescargar} className="flex-1">
-          <Download className="h-4 w-4" /> Descargar
+          <Download className="h-4 w-4" /> Descargar PDF
         </Button>
         <Button variant="outline" onClick={onCopiar} className="flex-1">
           {copiado ? (
@@ -196,7 +199,7 @@ function SemanaReporte({
                 : `${d.ejerciciosCompletados}/${d.totalEjercicios}`}
             </Badge>
           </div>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1.5 text-sm">
             {d.ejercicios.map((ex, i) => (
               <li
                 key={i}
@@ -204,12 +207,18 @@ function SemanaReporte({
                   ex.completado ? '' : 'text-muted-foreground/60'
                 }`}
               >
-                <span className="truncate">
+                <span className="min-w-0 truncate">
                   {ex.completado ? '✓ ' : '· '}
                   {ex.nombre}
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    · {ex.series} series
+                  </span>
                 </span>
                 <span className="shrink-0 tabular-nums font-semibold">
                   {ex.pesos.length ? ex.pesos.join('/') : '—'}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    {ex.unidad}
+                  </span>
                 </span>
               </li>
             ))}

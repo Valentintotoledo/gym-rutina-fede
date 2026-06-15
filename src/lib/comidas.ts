@@ -1,6 +1,10 @@
 export interface FoodEntry {
   id: string
   fecha: string // ISO
+  /** id de la comida (almuerzo, pre-entreno, etc.) */
+  comida: string
+  /** etiqueta visible de la comida */
+  comidaLabel: string
   descripcion: string
   foto?: string // data URL (JPEG comprimido)
 }

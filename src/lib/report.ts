@@ -19,6 +19,8 @@ function topSet(pesos: number[] | undefined): number | null {
 export interface EjercicioReporte {
   nombre: string
   repsLabel: string
+  series: number
+  unidad: 'kg' | 'reps'
   pesos: number[]
   completado: boolean
   topSet: number | null
@@ -33,6 +35,7 @@ export interface DiaReporte {
   ejerciciosCompletados: number
   totalEjercicios: number
   volumen: number
+  fecha: string | null
   ejercicios: EjercicioReporte[]
 }
 
@@ -56,6 +59,7 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
   const dias: DiaReporte[] = ROUTINE.map((day) => {
     let completadosDia = 0
     let volumenDia = 0
+    const fechasDia: string[] = []
     const ejercicios: EjercicioReporte[] = day.ejercicios.map((ex) => {
       const found = index.get(keyOf(semana, day.id, ex.id))
       const pesos = found?.pesos ?? []
@@ -63,14 +67,20 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
       if (completado) {
         completadosDia++
         ejerciciosCompletados++
-        if (found?.fecha) fechas.push(found.fecha)
+        if (found?.fecha) {
+          fechas.push(found.fecha)
+          fechasDia.push(found.fecha)
+        }
       }
+      const corporal = ex.unidad === 'reps' || ex.pesoCorporal
       const sumKg = pesos.reduce((a, b) => a + (b || 0), 0)
-      const vol = completado ? ex.reps * sumKg : 0
+      const vol = completado && !corporal ? ex.reps * sumKg : 0
       volumenDia += vol
       return {
         nombre: ex.nombre,
         repsLabel: ex.repsLabel,
+        series: ex.series,
+        unidad: (ex.unidad ?? (ex.pesoCorporal ? 'reps' : 'kg')) as 'kg' | 'reps',
         pesos,
         completado,
         topSet: topSet(pesos),
@@ -79,6 +89,7 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
     const entrenado = day.ejercicios.length > 0 && completadosDia === day.ejercicios.length
     if (entrenado) diasEntrenados++
     volumenTotal += volumenDia
+    fechasDia.sort()
     return {
       dia: day.id,
       nombre: day.nombre,
@@ -88,6 +99,7 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
       ejerciciosCompletados: completadosDia,
       totalEjercicios: day.ejercicios.length,
       volumen: volumenDia,
+      fecha: fechasDia[0] ?? null,
       ejercicios,
     }
   })
@@ -175,7 +187,9 @@ export function textoReporteSemana(
     for (const ex of d.ejercicios) {
       const marca = ex.completado ? '✓' : '·'
       const pesos = ex.pesos.length ? ex.pesos.map((p) => `${p}`).join('/') : '—'
-      L.push(`   ${marca} ${ex.nombre} (${ex.repsLabel}): ${pesos} kg`)
+      L.push(
+        `   ${marca} ${ex.nombre} (${ex.series} series · ${ex.repsLabel}): ${pesos} ${ex.unidad}`
+      )
     }
     L.push('')
   }

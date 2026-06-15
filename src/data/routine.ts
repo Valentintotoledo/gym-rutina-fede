@@ -16,7 +16,7 @@ export const ROUTINE: Day[] = [
     ejercicios: [
       { id: 'lun-remo-barra-piso', nombre: 'Remo barra prono piso libre', grupo: 'ESPALDA', series: 4, reps: 4, repsLabel: '3-5', pesoBase: 60, nota: 'Explosivo. Espalda plana, tirón desde el suelo.' },
       { id: 'lun-dominadas-lastradas', nombre: 'Dominadas lastradas RIR 1', grupo: 'ESPALDA', series: 3, reps: 7, repsLabel: '6-8', pesoBase: 10, nota: 'Agarre prono. Retracción escapular total.' },
-      { id: 'lun-australian-pullups', nombre: 'Australian pull ups prono (banco smith)', grupo: 'ESPALDA', series: 3, reps: 7, repsLabel: '6-8', pesoBase: 0, pesoCorporal: true, nota: 'Foco en contracción del dorsal. ROM completo.' },
+      { id: 'lun-australian-pullups', nombre: 'Australian pull ups prono (banco smith)', grupo: 'ESPALDA', series: 3, reps: 7, repsLabel: '6-8', pesoBase: 0, unidad: 'kg', step: 1, nota: 'Foco en contracción del dorsal. ROM completo.' },
       { id: 'lun-press-inclinado-barra', nombre: 'Press inclinado barra', grupo: 'PECHO SUPERIOR', series: 4, reps: 5, repsLabel: '5', pesoBase: 50, nota: '30-45°. Potencia máxima. Barra sobre clavícula.' },
       { id: 'lun-press-plano-mancuernas', nombre: 'Press plano mancuernas', grupo: 'PECHO SUPERIOR', series: 3, reps: 7, repsLabel: '6-8', pesoBase: 28, nota: 'ROM completo. Codos a 75°. Pesado.' },
       { id: 'lun-fondos-lastrados', nombre: 'Fondos lastrados', grupo: 'PECHO SUPERIOR', series: 3, reps: 7, repsLabel: '6-8', pesoBase: 10, nota: 'Torso ligeramente inclinado. Foco pecho.' },
@@ -54,7 +54,7 @@ export const ROUTINE: Day[] = [
       { id: 'mie-remo-banco-45', nombre: 'Remo banco 45', grupo: 'DENSIDAD', destacado: true, series: 4, reps: 9, repsLabel: '8-10', pesoBase: 25, nota: 'Pausa en contracción 1s. Máxima prioridad.' },
       { id: 'mie-remo-t', nombre: 'Remo T', grupo: 'DENSIDAD', destacado: true, series: 4, reps: 9, repsLabel: '8-10', pesoBase: 40, nota: 'Agarre supinado o neutro. Densidad central.' },
       { id: 'mie-remo-bajo-cable', nombre: 'Remo bajo cable inclinación adelante', grupo: 'DENSIDAD', destacado: true, series: 4, reps: 11, repsLabel: '10-12', pesoBase: 45, nota: 'Estiramiento completo + contracción peak.' },
-      { id: 'mie-dominadas-supinas', nombre: 'Dominadas supinas', grupo: 'AMPLITUD', series: 4, reps: 10, repsLabel: '8-12', pesoBase: 0, pesoCorporal: true, nota: 'Amplitud escapular. Llevar codos al suelo.' },
+      { id: 'mie-dominadas-supinas', nombre: 'Dominadas supinas', grupo: 'AMPLITUD', series: 4, reps: 10, repsLabel: '8-12', pesoBase: 0, pesoCorporal: true, unidad: 'reps', step: 1, nota: 'Amplitud escapular. Llevar codos al suelo.' },
       { id: 'mie-jalon-triangulo', nombre: 'Jalón cerrado triángulo', grupo: 'AMPLITUD', series: 4, reps: 11, repsLabel: '10-12', pesoBase: 50, nota: 'Agarre neutro. Codos hacia cadera.' },
       { id: 'mie-pullover-polea', nombre: 'Pullover polea', grupo: 'ESTIRAMIENTO', series: 3, reps: 15, repsLabel: '15', pesoBase: 25, nota: 'Finalizador. ROM máximo. Peso liviano.' },
       { id: 'mie-hombro-posterior', nombre: 'Máquina hombro posterior', grupo: 'DELT. POSTERIOR', series: 5, reps: 17, repsLabel: '15-20', pesoBase: 20, nota: 'Rotación externa. Alta rep. Salud del hombro.' },

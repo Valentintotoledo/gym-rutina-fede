@@ -24,11 +24,12 @@ export function useComidas() {
       comida: string,
       comidaLabel: string,
       descripcion: string,
-      foto?: string
+      foto?: string,
+      fechaISO?: string
     ) => {
       const entry: FoodEntry = {
         id: `${Date.now()}-${Math.round(Math.random() * 1e6)}`,
-        fecha: new Date().toISOString(),
+        fecha: fechaISO ?? new Date().toISOString(),
         comida,
         comidaLabel,
         descripcion: descripcion.trim(),

@@ -37,8 +37,8 @@ interface GymContextValue {
     ejercicio: string,
     completado: boolean
   ) => void
-  /** Marca toda la jornada (día/semana) como completada y sella la fecha de hoy */
-  guardarDia: (semana: number, dia: DayId) => void
+  /** Marca toda la jornada (día/semana) como completada y sella la fecha indicada (o hoy) */
+  guardarDia: (semana: number, dia: DayId, fecha?: string) => void
   isDiaCompleto: (semana: number, dia: DayId) => boolean
   resetMock: () => void
 }
@@ -171,10 +171,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const guardarDia = useCallback(
-    (semana: number, dia: DayId) => {
+    (semana: number, dia: DayId, fechaISO?: string) => {
       const day = ROUTINE.find((d) => d.id === dia)
       if (!day) return
-      const fecha = new Date().toISOString()
+      const fecha = fechaISO ?? new Date().toISOString()
       const next = [...logs]
       for (const ex of day.ejercicios) {
         const idx = next.findIndex(

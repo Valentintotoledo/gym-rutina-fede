@@ -8,8 +8,8 @@ import type { Day, Exercise } from '../types'
 export const ROUTINE: Day[] = [
   {
     id: 'lunes',
-    nombreCorto: 'Lun',
-    nombre: 'Lunes',
+    nombreCorto: 'D1',
+    nombre: 'Día 1',
     titulo: 'Upper Power',
     tipo: 'FUERZA',
     foco: 'Espalda · Pecho Superior · Bíceps',
@@ -27,8 +27,8 @@ export const ROUTINE: Day[] = [
   },
   {
     id: 'martes',
-    nombreCorto: 'Mar',
-    nombre: 'Martes',
+    nombreCorto: 'D2',
+    nombre: 'Día 2',
     titulo: 'Lower Power',
     tipo: 'FUERZA',
     foco: 'Cuádriceps · Femorales · Gemelos',
@@ -44,8 +44,8 @@ export const ROUTINE: Day[] = [
   },
   {
     id: 'miercoles',
-    nombreCorto: 'Mié',
-    nombre: 'Miércoles',
+    nombreCorto: 'D3',
+    nombre: 'Día 3',
     titulo: 'Espalda Especialización',
     tipo: 'HIPERTROFIA',
     foco: '⭐ Densidad dorsal · Amplitud · Bíceps',
@@ -64,8 +64,8 @@ export const ROUTINE: Day[] = [
   },
   {
     id: 'jueves',
-    nombreCorto: 'Jue',
-    nombre: 'Jueves',
+    nombreCorto: 'D4',
+    nombre: 'Día 4',
     titulo: 'Lower Hipertrofia',
     tipo: 'HIPERTROFIA',
     foco: 'Femorales · Gemelos · Glúteos',
@@ -84,8 +84,8 @@ export const ROUTINE: Day[] = [
   },
   {
     id: 'viernes',
-    nombreCorto: 'Vie',
-    nombre: 'Viernes',
+    nombreCorto: 'D5',
+    nombre: 'Día 5',
     titulo: 'Pecho Superior + Brazos',
     tipo: 'HIPERTROFIA',
     foco: '⭐ Pecho clavicular · Bíceps largo · Tríceps',

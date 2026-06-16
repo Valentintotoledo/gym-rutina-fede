@@ -7,14 +7,17 @@ import {
   Moon,
   Cookie,
   Camera,
+  Images,
   Check,
   Trash2,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useComidas } from '@/hooks/useComidas'
-import { fileToCompressedDataURL, type FoodEntry } from '@/lib/comidas'
+import { fileToCompressedDataURL } from '@/lib/comidas'
 
 interface Comida {
   id: string
@@ -84,18 +87,38 @@ const COMIDAS: Comida[] = [
   },
 ]
 
-function fmtFecha(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
+const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const MESES = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
+/** Fecha local en formato YYYY-MM-DD (sin saltos de zona horaria). */
+function toDateStr(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+function fmtHora(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-AR', {
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
-function fmtDiaTitulo(iso: string) {
-  return new Date(iso).toLocaleDateString('es-AR', {
+function fmtDiaLargo(dateStr: string) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -104,17 +127,53 @@ function fmtDiaTitulo(iso: string) {
 
 export function ComidasView() {
   const { entries, addEntry, removeEntry } = useComidas()
+  const hoy = toDateStr(new Date())
+  const [sel, setSel] = useState(hoy)
+  const [mesView, setMesView] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
 
-  // Agrupa el historial por día (clave YYYY-MM-DD)
-  const porDia = useMemo(() => {
-    const map = new Map<string, FoodEntry[]>()
+  // Cantidad de comidas por día (clave YYYY-MM-DD), para los puntos del calendario
+  const conteoPorDia = useMemo(() => {
+    const map = new Map<string, number>()
     for (const e of entries) {
       const k = e.fecha.slice(0, 10)
-      if (!map.has(k)) map.set(k, [])
-      map.get(k)!.push(e)
+      map.set(k, (map.get(k) ?? 0) + 1)
     }
-    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+    return map
   }, [entries])
+
+  // Comidas del día seleccionado
+  const delDia = useMemo(
+    () =>
+      entries
+        .filter((e) => e.fecha.slice(0, 10) === sel)
+        .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    [entries, sel]
+  )
+
+  const registrar = (c: Comida, desc: string, foto?: string) => {
+    // Hoy → con la hora actual; otro día → mediodía para mantener el orden
+    const iso =
+      sel === hoy
+        ? new Date().toISOString()
+        : new Date(`${sel}T12:00:00`).toISOString()
+    addEntry(c.id, c.titulo, desc, foto, iso)
+  }
+
+  // Construcción de la grilla del mes
+  const year = mesView.getFullYear()
+  const month = mesView.getMonth()
+  const primerDia = new Date(year, month, 1)
+  const offset = (primerDia.getDay() + 6) % 7 // lunes = 0
+  const diasEnMes = new Date(year, month + 1, 0).getDate()
+  const celdas: (string | null)[] = []
+  for (let i = 0; i < offset; i++) celdas.push(null)
+  for (let d = 1; d <= diasEnMes; d++) celdas.push(toDateStr(new Date(year, month, d)))
+
+  const irMes = (delta: number) =>
+    setMesView(new Date(year, month + delta, 1))
 
   return (
     <motion.div
@@ -125,78 +184,136 @@ export function ComidasView() {
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Comidas</h1>
         <p className="text-sm text-muted-foreground">
-          Registrá cada comida del día con foto y descripción
+          Elegí un día del calendario y registrá lo que comiste
         </p>
       </div>
 
+      {/* Calendario */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            onClick={() => irMes(-1)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary"
+            aria-label="Mes anterior"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <p className="text-sm font-extrabold capitalize">
+            {MESES[month]} {year}
+          </p>
+          <button
+            onClick={() => irMes(1)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary"
+            aria-label="Mes siguiente"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {DOW.map((d, i) => (
+            <div
+              key={i}
+              className="pb-1 text-center text-[11px] font-bold text-muted-foreground"
+            >
+              {d}
+            </div>
+          ))}
+          {celdas.map((dateStr, i) => {
+            if (!dateStr) return <div key={i} />
+            const n = conteoPorDia.get(dateStr) ?? 0
+            const esHoy = dateStr === hoy
+            const activo = dateStr === sel
+            const futuro = dateStr > hoy
+            return (
+              <button
+                key={i}
+                disabled={futuro}
+                onClick={() => setSel(dateStr)}
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                  activo
+                    ? 'bg-primary text-primary-foreground'
+                    : futuro
+                      ? 'text-muted-foreground/30'
+                      : esHoy
+                        ? 'bg-secondary text-foreground'
+                        : 'text-foreground hover:bg-secondary'
+                }`}
+              >
+                {Number(dateStr.slice(8, 10))}
+                {n > 0 && (
+                  <span
+                    className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${
+                      activo ? 'bg-primary-foreground' : 'bg-primary'
+                    }`}
+                  />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Día seleccionado */}
+      <div>
+        <p className="text-sm font-bold capitalize">
+          {sel === hoy ? 'Hoy · ' : ''}
+          {fmtDiaLargo(sel)}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {delDia.length === 0
+            ? 'Sin comidas registradas este día'
+            : `${delDia.length} comida${delDia.length === 1 ? '' : 's'} registrada${delDia.length === 1 ? '' : 's'}`}
+        </p>
+      </div>
+
+      {/* Comidas registradas del día */}
+      {delDia.length > 0 && (
+        <div className="space-y-2">
+          {delDia.map((e) => (
+            <Card key={e.id} className="overflow-hidden">
+              {e.foto && (
+                <img
+                  src={e.foto}
+                  alt={e.descripcion}
+                  className="max-h-56 w-full object-cover"
+                />
+              )}
+              <div className="flex items-start justify-between gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                    {e.comidaLabel}
+                  </p>
+                  <p className="text-sm font-semibold">{e.descripcion}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {fmtHora(e.fecha)} hs
+                  </p>
+                </div>
+                <button
+                  onClick={() => removeEntry(e.id)}
+                  aria-label="Borrar"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Registrar comidas para el día seleccionado */}
       <div className="space-y-3">
+        <h2 className="text-lg font-extrabold tracking-tight">
+          Registrar comida
+        </h2>
         {COMIDAS.map((c) => (
           <MealCard
             key={c.id}
             comida={c}
-            onGuardar={(desc, foto) =>
-              addEntry(c.id, c.titulo, desc, foto)
-            }
+            onGuardar={(desc, foto) => registrar(c, desc, foto)}
           />
         ))}
-      </div>
-
-      {/* Recopilación por fecha */}
-      <div>
-        <h2 className="mb-2 text-lg font-extrabold tracking-tight">
-          Historial
-        </h2>
-        {porDia.length === 0 ? (
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">
-              Todavía no registraste comidas. Cargá lo que comiste en cada
-              comida de arriba y se va a ir juntando acá por fecha.
-            </p>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {porDia.map(([dia, items]) => (
-              <div key={dia}>
-                <p className="mb-2 text-sm font-bold capitalize text-muted-foreground">
-                  {fmtDiaTitulo(items[0].fecha)}
-                </p>
-                <div className="space-y-2">
-                  {items.map((e) => (
-                    <Card key={e.id} className="overflow-hidden">
-                      {e.foto && (
-                        <img
-                          src={e.foto}
-                          alt={e.descripcion}
-                          className="max-h-56 w-full object-cover"
-                        />
-                      )}
-                      <div className="flex items-start justify-between gap-3 p-3">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                            {e.comidaLabel}
-                          </p>
-                          <p className="text-sm font-semibold">
-                            {e.descripcion}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {fmtFecha(e.fecha)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeEntry(e.id)}
-                          aria-label="Borrar"
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </motion.div>
   )
@@ -214,7 +331,8 @@ function MealCard({
   const [foto, setFoto] = useState<string | undefined>(undefined)
   const [cargando, setCargando] = useState(false)
   const [guardado, setGuardado] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const camaraRef = useRef<HTMLInputElement>(null)
+  const galeriaRef = useRef<HTMLInputElement>(null)
 
   const onPickFile = async (file?: File) => {
     if (!file) return
@@ -228,12 +346,17 @@ function MealCard({
     }
   }
 
+  const limpiarFoto = () => {
+    setFoto(undefined)
+    if (camaraRef.current) camaraRef.current.value = ''
+    if (galeriaRef.current) galeriaRef.current.value = ''
+  }
+
   const guardar = () => {
     if (!desc.trim() && !foto) return
     onGuardar(desc || titulo, foto)
     setDesc('')
-    setFoto(undefined)
-    if (fileRef.current) fileRef.current.value = ''
+    limpiarFoto()
     setGuardado(true)
     window.setTimeout(() => setGuardado(false), 1600)
   }
@@ -269,11 +392,20 @@ function MealCard({
 
       {/* Registrar esta comida */}
       <div className="mt-3 space-y-2 border-t border-border pt-3">
+        {/* Cámara (abre la cámara en el celular) */}
         <input
-          ref={fileRef}
+          ref={camaraRef}
           type="file"
           accept="image/*"
           capture="environment"
+          className="hidden"
+          onChange={(e) => onPickFile(e.target.files?.[0])}
+        />
+        {/* Galería (elegir foto existente) */}
+        <input
+          ref={galeriaRef}
+          type="file"
+          accept="image/*"
           className="hidden"
           onChange={(e) => onPickFile(e.target.files?.[0])}
         />
@@ -286,10 +418,7 @@ function MealCard({
               className="max-h-48 w-full rounded-xl object-cover"
             />
             <button
-              onClick={() => {
-                setFoto(undefined)
-                if (fileRef.current) fileRef.current.value = ''
-              }}
+              onClick={limpiarFoto}
               className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
               aria-label="Quitar foto"
             >
@@ -306,32 +435,41 @@ function MealCard({
           className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0"
             disabled={cargando}
-            onClick={() => fileRef.current?.click()}
+            onClick={() => camaraRef.current?.click()}
           >
             <Camera className="h-4 w-4" />
-            {cargando ? 'Procesando…' : 'Foto'}
+            {cargando ? '…' : 'Cámara'}
           </Button>
           <Button
+            variant="outline"
             size="sm"
-            className="flex-1"
-            disabled={!desc.trim() && !foto}
-            onClick={guardar}
+            disabled={cargando}
+            onClick={() => galeriaRef.current?.click()}
           >
-            {guardado ? (
-              <>
-                <Check className="h-4 w-4" /> Guardado
-              </>
-            ) : (
-              'Registrar comida'
-            )}
+            <Images className="h-4 w-4" />
+            {cargando ? '…' : 'Galería'}
           </Button>
         </div>
+
+        <Button
+          size="sm"
+          className="w-full"
+          disabled={!desc.trim() && !foto}
+          onClick={guardar}
+        >
+          {guardado ? (
+            <>
+              <Check className="h-4 w-4" /> Guardado
+            </>
+          ) : (
+            'Registrar comida'
+          )}
+        </Button>
       </div>
     </Card>
   )

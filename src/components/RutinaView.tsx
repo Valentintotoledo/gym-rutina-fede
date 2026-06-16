@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Check, Save } from 'lucide-react'
+import { Check, Save, CalendarDays } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ROUTINE, todayDayId } from '@/data/routine'
+import { ROUTINE } from '@/data/routine'
 import { TOTAL_WEEKS, type DayId } from '@/types'
 import { currentWeek } from '@/lib/week'
 import { cn } from '@/lib/utils'
@@ -12,10 +12,18 @@ import { WeekSelector } from './WeekSelector'
 import { ExerciseCard } from './ExerciseCard'
 import { useGym } from '@/store'
 
+function hoyStr(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
 export function RutinaView() {
   const { getEntry, guardarDia } = useGym()
   const [semana, setSemana] = useState(() => currentWeek())
-  const [diaId, setDiaId] = useState<DayId>(() => todayDayId())
+  const [diaId, setDiaId] = useState<DayId>(() => ROUTINE[0].id)
+  const [fecha, setFecha] = useState(() => hoyStr())
   const [justSaved, setJustSaved] = useState(false)
 
   const day = ROUTINE.find((d) => d.id === diaId)!
@@ -30,7 +38,9 @@ export function RutinaView() {
   const pct = Math.round((completados / total) * 100)
 
   const onGuardar = () => {
-    guardarDia(semana, diaId)
+    // Sella la jornada con la fecha elegida (mediodía local para evitar saltos de zona horaria)
+    const iso = new Date(`${fecha}T12:00:00`).toISOString()
+    guardarDia(semana, diaId, iso)
     setJustSaved(true)
     window.setTimeout(() => setJustSaved(false), 1800)
   }
@@ -152,6 +162,28 @@ export function RutinaView() {
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Fecha del entrenamiento */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <CalendarDays className="h-5 w-5" />
+          </span>
+          <div className="leading-tight">
+            <p className="text-sm font-bold">¿Qué día lo hiciste?</p>
+            <p className="text-xs text-muted-foreground">
+              Se guarda con esta fecha
+            </p>
+          </div>
+        </div>
+        <input
+          type="date"
+          value={fecha}
+          max={hoyStr()}
+          onChange={(e) => setFecha(e.target.value || hoyStr())}
+          className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
 
       {/* Guardar */}
       <Button

@@ -13,6 +13,7 @@ import { loadLogs, saveLogs, resetToMock } from './lib/storage'
 
 interface EntryView {
   pesos: number[]
+  reps: number[]
   completado: boolean
   fecha: string
   /** true si el peso proviene de un registro guardado para esa semana */
@@ -30,6 +31,14 @@ interface GymContextValue {
     ejercicio: string,
     serie: number,
     peso: number
+  ) => void
+  /** Cambia las repeticiones hechas en una serie puntual */
+  setRepSerie: (
+    semana: number,
+    dia: DayId,
+    ejercicio: string,
+    serie: number,
+    reps: number
   ) => void
   setCompletado: (
     semana: number,
@@ -99,6 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (found) {
         return {
           pesos: normalizePesos(found.pesos, series, pesoSugerido(semana, ejercicio)),
+          reps: normalizePesos(found.reps, series, 0),
           completado: found.completado,
           fecha: found.fecha,
           registrado: true,
@@ -106,6 +116,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return {
         pesos: normalizePesos(undefined, series, pesoSugerido(semana, ejercicio)),
+        reps: normalizePesos(undefined, series, 0),
         completado: false,
         fecha: '',
         registrado: false,
@@ -156,6 +167,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const pesos = normalizePesos(actual, series, 0)
       if (serie >= 0 && serie < pesos.length) pesos[serie] = Math.max(0, peso)
       upsert(semana, dia, ejercicio, { pesos })
+    },
+    [getEntry, upsert]
+  )
+
+  const setRepSerie = useCallback(
+    (
+      semana: number,
+      dia: DayId,
+      ejercicio: string,
+      serie: number,
+      reps: number
+    ) => {
+      const ex = getExercise(ejercicio)
+      const series = ex?.series ?? 1
+      const actual = getEntry(semana, dia, ejercicio).reps
+      const next = normalizePesos(actual, series, 0)
+      if (serie >= 0 && serie < next.length) next[serie] = Math.max(0, Math.round(reps))
+      upsert(semana, dia, ejercicio, { reps: next })
     },
     [getEntry, upsert]
   )
@@ -217,6 +246,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logs,
     getEntry,
     setPesoSerie,
+    setRepSerie,
     setCompletado,
     guardarDia,
     isDiaCompleto,

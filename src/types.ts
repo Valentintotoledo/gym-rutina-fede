@@ -30,6 +30,8 @@ export interface Exercise {
   unidad?: 'kg' | 'reps'
   /** Incremento de los botones +/- (default 2.5) */
   step?: number
+  /** Marca de bi-serie: ejercicios con la misma clave se hacen juntos */
+  biserie?: string
 }
 
 export interface Day {
@@ -49,6 +51,7 @@ export interface WeeklyLog {
   dia: DayId
   ejercicio: string // id del ejercicio
   pesos: number[] // kg por serie
+  reps?: number[] // repeticiones hechas por serie (0 = sin registrar)
   completado: boolean
   fecha: string // ISO date
 }

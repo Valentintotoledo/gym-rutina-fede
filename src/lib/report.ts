@@ -22,6 +22,7 @@ export interface EjercicioReporte {
   series: number
   unidad: 'kg' | 'reps'
   pesos: number[]
+  reps: number[]
   completado: boolean
   topSet: number | null
 }
@@ -63,6 +64,7 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
     const ejercicios: EjercicioReporte[] = day.ejercicios.map((ex) => {
       const found = index.get(keyOf(semana, day.id, ex.id))
       const pesos = found?.pesos ?? []
+      const reps = found?.reps ?? []
       const completado = !!found?.completado
       if (completado) {
         completadosDia++
@@ -82,6 +84,7 @@ export function reporteSemana(logs: WeeklyLog[], semana: number): ReporteSemana 
         series: ex.series,
         unidad: (ex.unidad ?? (ex.pesoCorporal ? 'reps' : 'kg')) as 'kg' | 'reps',
         pesos,
+        reps,
         completado,
         topSet: topSet(pesos),
       }
@@ -186,9 +189,16 @@ export function textoReporteSemana(
     )
     for (const ex of d.ejercicios) {
       const marca = ex.completado ? '✓' : '·'
-      const pesos = ex.pesos.length ? ex.pesos.map((p) => `${p}`).join('/') : '—'
+      const detalle = ex.pesos.length
+        ? ex.pesos
+            .map((p, i) => {
+              const r = ex.reps[i]
+              return r ? `${p}${ex.unidad}×${r}` : `${p}${ex.unidad}`
+            })
+            .join(' / ')
+        : '—'
       L.push(
-        `   ${marca} ${ex.nombre} (${ex.series} series · ${ex.repsLabel}): ${pesos} ${ex.unidad}`
+        `   ${marca} ${ex.nombre} (${ex.series} series · ${ex.repsLabel}): ${detalle}`
       )
     }
     L.push('')

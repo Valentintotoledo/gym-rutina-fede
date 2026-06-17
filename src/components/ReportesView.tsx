@@ -214,8 +214,27 @@ function SemanaReporte({
                     · {ex.series} series
                   </span>
                 </span>
-                <span className="shrink-0 tabular-nums font-semibold">
-                  {ex.pesos.length ? ex.pesos.join('/') : '—'}
+                <span className="shrink-0 text-right tabular-nums font-semibold">
+                  {ex.pesos.length ? (
+                    ex.pesos.map((p, j) => {
+                      const r = ex.reps[j]
+                      return (
+                        <span key={j}>
+                          {j > 0 && (
+                            <span className="text-muted-foreground/50">/</span>
+                          )}
+                          {p}
+                          {r ? (
+                            <span className="text-xs font-normal text-muted-foreground">
+                              ×{r}
+                            </span>
+                          ) : null}
+                        </span>
+                      )
+                    })
+                  ) : (
+                    '—'
+                  )}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
                     {ex.unidad}
                   </span>

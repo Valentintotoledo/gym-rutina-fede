@@ -10,6 +10,9 @@ import {
 import type { DayId, WeeklyLog } from './types'
 import { ALL_EXERCISES, getExercise, ROUTINE } from './data/routine'
 import { loadLogs, saveLogs, resetToMock } from './lib/storage'
+import { makeDebouncedPush, pull, push, subscribe } from './lib/sync'
+
+const SYNC_KEY = 'logs'
 
 interface EntryView {
   pesos: number[]
@@ -68,8 +71,36 @@ function normalizePesos(pesos: number[] | undefined, series: number, fill: numbe
 export function AppProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<WeeklyLog[]>([])
 
+  // Subida con debounce a la nube (no-op si no hay credenciales)
+  const pushLogs = useMemo(() => makeDebouncedPush<WeeklyLog[]>(SYNC_KEY), [])
+
   useEffect(() => {
-    setLogs(loadLogs())
+    let active = true
+    const local = loadLogs()
+    setLogs(local)
+
+    // Trae lo que haya en la nube; si está vacía, sube lo local
+    void pull<WeeklyLog[]>(SYNC_KEY).then((cloud) => {
+      if (!active) return
+      if (Array.isArray(cloud)) {
+        setLogs(cloud)
+        saveLogs(cloud)
+      } else if (local.length) {
+        void push(SYNC_KEY, local)
+      }
+    })
+
+    // Se actualiza solo cuando otro dispositivo guarda
+    const unsub = subscribe<WeeklyLog[]>(SYNC_KEY, (cloud) => {
+      if (!active || !Array.isArray(cloud)) return
+      setLogs(cloud)
+      saveLogs(cloud)
+    })
+
+    return () => {
+      active = false
+      unsub()
+    }
   }, [])
 
   // Índice rápido por clave
@@ -79,10 +110,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return m
   }, [logs])
 
-  const persist = useCallback((next: WeeklyLog[]) => {
-    setLogs(next)
-    saveLogs(next)
-  }, [])
+  const persist = useCallback(
+    (next: WeeklyLog[]) => {
+      setLogs(next)
+      saveLogs(next)
+      pushLogs(next)
+    },
+    [pushLogs]
+  )
 
   /** Peso sugerido por serie: máximo registrado en semanas anteriores, o el base. */
   const pesoSugerido = useCallback(

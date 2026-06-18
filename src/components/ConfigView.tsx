@@ -1,10 +1,20 @@
 import { useState } from 'react'
-import { LogOut, Moon, RotateCcw, Sun, Trash2, Github } from 'lucide-react'
+import {
+  LogOut,
+  Moon,
+  RotateCcw,
+  Sun,
+  Trash2,
+  Github,
+  Cloud,
+  CloudOff,
+} from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useGym } from '@/store'
 import { clearLogs } from '@/lib/storage'
 import { ROUTINE } from '@/data/routine'
+import { syncEnabled } from '@/lib/sync'
 
 export function ConfigView({
   theme,
@@ -30,6 +40,37 @@ export function ConfigView({
         <h1 className="text-2xl font-extrabold tracking-tight">Config</h1>
         <p className="text-sm text-muted-foreground">Ajustes de la app</p>
       </div>
+
+      {/* Sincronización */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <span
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+              syncEnabled()
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {syncEnabled() ? (
+              <Cloud className="h-5 w-5" />
+            ) : (
+              <CloudOff className="h-5 w-5" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold">
+              {syncEnabled()
+                ? 'Sincronización activada'
+                : 'Sincronización desactivada'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {syncEnabled()
+                ? 'Tus datos se comparten entre el celular y la computadora.'
+                : 'Por ahora los datos quedan solo en este dispositivo.'}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Apariencia */}
       <Card className="divide-y divide-border">
@@ -142,7 +183,11 @@ export function ConfigView({
         <p className="font-semibold">Sobre la app</p>
         <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
           <li>Rutina de 5 días · {totalEjercicios} ejercicios</li>
-          <li>Datos guardados en este dispositivo (localStorage)</li>
+          <li>
+            {syncEnabled()
+              ? 'Datos en la nube (Supabase) + copia local'
+              : 'Datos guardados en este dispositivo (localStorage)'}
+          </li>
           <li>Hecha a medida para Juan 💪</li>
         </ul>
         <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/70">

@@ -7,11 +7,13 @@ import {
   Sun,
   UtensilsCrossed,
   FileText,
+  Home,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/hooks/useTheme'
+import { InicioView } from '@/components/InicioView'
 import { RutinaView } from '@/components/RutinaView'
 import { ProgresoView } from '@/components/ProgresoView'
 import { ReportesView } from '@/components/ReportesView'
@@ -19,10 +21,12 @@ import { ComidasView } from '@/components/ComidasView'
 import { ConfigView } from '@/components/ConfigView'
 import { Login } from '@/components/Login'
 import { isAuthed, logout } from '@/lib/auth'
+import type { DayId } from '@/types'
 
-type View = 'rutina' | 'progreso' | 'reportes' | 'comidas' | 'config'
+type View = 'inicio' | 'rutina' | 'progreso' | 'reportes' | 'comidas' | 'config'
 
 const NAV: { id: View; label: string; icon: typeof Dumbbell }[] = [
+  { id: 'inicio', label: 'Inicio', icon: Home },
   { id: 'rutina', label: 'Rutina', icon: Dumbbell },
   { id: 'progreso', label: 'Progreso', icon: BarChart3 },
   { id: 'reportes', label: 'Reportes', icon: FileText },
@@ -31,8 +35,10 @@ const NAV: { id: View; label: string; icon: typeof Dumbbell }[] = [
 ]
 
 export default function App() {
-  const [view, setView] = useState<View>('rutina')
+  const [view, setView] = useState<View>('inicio')
   const [authed, setAuthed] = useState(() => isAuthed())
+  const [rutinaInit, setRutinaInit] = useState<{ semana: number; dia: DayId }>()
+  const [rutinaKey, setRutinaKey] = useState(0)
   const { theme, toggle } = useTheme()
 
   if (!authed) {
@@ -42,6 +48,13 @@ export default function App() {
   const onLogout = () => {
     logout()
     setAuthed(false)
+    setView('inicio')
+  }
+
+  const abrirDia = (semana: number, dia: DayId) => {
+    setRutinaInit({ semana, dia })
+    setRutinaKey((k) => k + 1)
+    setView('rutina')
   }
 
   return (
@@ -92,24 +105,44 @@ export default function App() {
 
       {/* Contenido */}
       <div className="md:pl-60">
-        {/* Header mobile */}
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 px-4 py-3 backdrop-blur md:hidden">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Dumbbell className="h-5 w-5" />
+        {/* Header + tabs (mobile) */}
+        <div className="sticky top-0 z-20 border-b border-border bg-card/85 backdrop-blur md:hidden">
+          <header className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Dumbbell className="h-5 w-5" />
+              </div>
+              <p className="text-base font-bold">Mi Rutina</p>
             </div>
-            <p className="text-base font-bold">Mi Rutina</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={toggle}>
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
-        </header>
+            <Button variant="ghost" size="icon" onClick={toggle}>
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+          </header>
+          {/* Barra de secciones arriba */}
+          <nav className="flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {NAV.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
+                  view === id
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-secondary'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-        <main className="mx-auto max-w-3xl px-4 pb-28 pt-5 md:pb-10 md:pt-8">
+        <main className="mx-auto max-w-3xl px-4 pb-10 pt-5 md:pt-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={view}
@@ -118,7 +151,15 @@ export default function App() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              {view === 'rutina' && <RutinaView />}
+              {view === 'inicio' && (
+                <InicioView
+                  onAbrirDia={abrirDia}
+                  onIrComidas={() => setView('comidas')}
+                />
+              )}
+              {view === 'rutina' && (
+                <RutinaView key={rutinaKey} initial={rutinaInit} />
+              )}
               {view === 'progreso' && <ProgresoView />}
               {view === 'reportes' && <ReportesView />}
               {view === 'comidas' && <ComidasView />}
@@ -133,25 +174,6 @@ export default function App() {
           </AnimatePresence>
         </main>
       </div>
-
-      {/* Bottom nav mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setView(id)}
-              className={cn(
-                'flex flex-col items-center gap-1 py-2.5 text-xs font-semibold transition-colors',
-                view === id ? 'text-primary' : 'text-muted-foreground'
-              )}
-            >
-              <Icon className={cn('h-6 w-6', view === id && 'scale-110')} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
     </div>
   )
 }

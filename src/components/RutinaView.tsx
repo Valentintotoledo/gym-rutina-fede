@@ -19,10 +19,14 @@ function hoyStr(): string {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
-export function RutinaView() {
+export function RutinaView({
+  initial,
+}: {
+  initial?: { semana: number; dia: DayId }
+} = {}) {
   const { getEntry, guardarDia } = useGym()
-  const [semana, setSemana] = useState(() => currentWeek())
-  const [diaId, setDiaId] = useState<DayId>(() => ROUTINE[0].id)
+  const [semana, setSemana] = useState(() => initial?.semana ?? currentWeek())
+  const [diaId, setDiaId] = useState<DayId>(() => initial?.dia ?? ROUTINE[0].id)
   const [fecha, setFecha] = useState(() => hoyStr())
   const [justSaved, setJustSaved] = useState(false)
 

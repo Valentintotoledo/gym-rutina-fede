@@ -260,7 +260,8 @@ function SerieRow({
                 onClick={() => {
                   setOtroOpen(false)
                   setOtroStr('')
-                  onReps(o)
+                  // Volver a tocar la opción ya elegida la desmarca (vuelve a 0)
+                  onReps(sel ? 0 : o)
                 }}
                 className={cn(
                   'h-7 min-w-7 rounded-lg border px-2 text-sm font-bold tabular-nums transition-colors',
@@ -276,7 +277,16 @@ function SerieRow({
           {opts.length > 0 && (
             <button
               type="button"
-              onClick={() => setOtroOpen(true)}
+              onClick={() => {
+                // Si ya está activo, lo cierra y borra el valor
+                if (otroActivo) {
+                  setOtroOpen(false)
+                  setOtroStr('')
+                  onReps(0)
+                } else {
+                  setOtroOpen(true)
+                }
+              }}
               className={cn(
                 'h-7 rounded-lg border px-2 text-xs font-bold transition-colors',
                 otroActivo

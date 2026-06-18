@@ -68,6 +68,22 @@ function normalizePesos(pesos: number[] | undefined, series: number, fill: numbe
   return out
 }
 
+/**
+ * ¿Se hizo realmente el ejercicio? Se considera hecho cuando hay datos
+ * cargados: en ejercicios de carga (kg) cuando hay reps anotadas; en los
+ * que se miden por cantidad (dominadas / peso corporal) cuando hay conteo.
+ */
+function hizoEjercicio(
+  ejercicioId: string,
+  pesos: number[] | undefined,
+  reps: number[] | undefined
+): boolean {
+  const ex = getExercise(ejercicioId)
+  const porConteo = ex?.unidad === 'reps' || ex?.pesoCorporal
+  if (porConteo) return (pesos ?? []).some((p) => p > 0)
+  return (reps ?? []).some((r) => r > 0)
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<WeeklyLog[]>([])
 
@@ -198,10 +214,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ) => {
       const ex = getExercise(ejercicio)
       const series = ex?.series ?? 1
-      const actual = getEntry(semana, dia, ejercicio).pesos
-      const pesos = normalizePesos(actual, series, 0)
+      const entry = getEntry(semana, dia, ejercicio)
+      const pesos = normalizePesos(entry.pesos, series, 0)
       if (serie >= 0 && serie < pesos.length) pesos[serie] = Math.max(0, peso)
-      upsert(semana, dia, ejercicio, { pesos })
+      upsert(semana, dia, ejercicio, {
+        pesos,
+        completado: hizoEjercicio(ejercicio, pesos, entry.reps),
+      })
     },
     [getEntry, upsert]
   )
@@ -216,10 +235,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ) => {
       const ex = getExercise(ejercicio)
       const series = ex?.series ?? 1
-      const actual = getEntry(semana, dia, ejercicio).reps
-      const next = normalizePesos(actual, series, 0)
+      const entry = getEntry(semana, dia, ejercicio)
+      const next = normalizePesos(entry.reps, series, 0)
       if (serie >= 0 && serie < next.length) next[serie] = Math.max(0, Math.round(reps))
-      upsert(semana, dia, ejercicio, { reps: next })
+      upsert(semana, dia, ejercicio, {
+        reps: next,
+        completado: hizoEjercicio(ejercicio, entry.pesos, next),
+      })
     },
     [getEntry, upsert]
   )
@@ -244,18 +266,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const idx = next.findIndex(
           (l) => l.semana === semana && l.dia === dia && l.ejercicio === ex.id
         )
+        // Sólo se marca hecho el ejercicio que realmente tiene datos cargados
         if (idx >= 0) {
-          next[idx] = { ...next[idx], completado: true, fecha }
-        } else {
-          next.push({
-            semana,
-            dia,
-            ejercicio: ex.id,
-            pesos: normalizePesos(undefined, ex.series, pesoSugerido(semana, ex.id)),
-            completado: true,
-            fecha,
-          })
+          const hecho = hizoEjercicio(ex.id, next[idx].pesos, next[idx].reps)
+          next[idx] = { ...next[idx], completado: hecho, fecha }
         }
+        // Si no hay registro, no se crea nada (no se hizo el ejercicio)
       }
       persist(next)
     },

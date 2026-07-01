@@ -32,11 +32,17 @@ export function InicioView({
   const dias = useMemo(
     () =>
       ROUTINE.map((d) => {
-        const completados = d.ejercicios.filter(
-          (e) => getEntry(semana, d.id, e.id).completado
-        ).length
+        let completados = 0
+        let saltados = 0
+        for (const e of d.ejercicios) {
+          const en = getEntry(semana, d.id, e.id)
+          if (en.completado) completados++
+          else if (en.saltado) saltados++
+        }
         const total = d.ejercicios.length
-        return { day: d, completados, total, entrenado: completados === total }
+        // "Hecho" = no queda ningún ejercicio pendiente (hecho ✓ o "no lo hice" ✗)
+        const hecho = completados > 0 && completados + saltados === total
+        return { day: d, completados, saltados, total, hecho }
       }),
     [semana, getEntry]
   )
@@ -69,17 +75,26 @@ export function InicioView({
           Elegí el día
         </h2>
         <div className="space-y-2.5">
-          {dias.map(({ day, completados, total, entrenado }) => (
+          {dias.map(({ day, completados, saltados, total, hecho }) => (
             <button
               key={day.id}
               onClick={() => onAbrirDia(semana, day.id)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/40 active:scale-[0.99]"
+              className={cn(
+                'flex w-full items-center gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors active:scale-[0.99]',
+                hecho
+                  ? 'border-emerald-500/50 bg-emerald-500/[0.08] hover:border-emerald-500'
+                  : 'border-border bg-card hover:border-primary/40'
+              )}
             >
               {/* Indicador del día */}
               <div
                 className={cn(
                   'flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl text-white',
-                  day.tipo === 'FUERZA' ? 'bg-fuerza' : 'bg-hipertrofia'
+                  hecho
+                    ? 'bg-emerald-500'
+                    : day.tipo === 'FUERZA'
+                      ? 'bg-fuerza'
+                      : 'bg-hipertrofia'
                 )}
               >
                 <span className="text-base font-extrabold leading-none">
@@ -107,18 +122,32 @@ export function InicioView({
                     <div
                       className={cn(
                         'h-full rounded-full',
-                        day.tipo === 'FUERZA' ? 'bg-fuerza' : 'bg-hipertrofia'
+                        hecho
+                          ? 'bg-emerald-500'
+                          : day.tipo === 'FUERZA'
+                            ? 'bg-fuerza'
+                            : 'bg-hipertrofia'
                       )}
-                      style={{ width: `${(completados / total) * 100}%` }}
+                      style={{
+                        width: `${hecho ? 100 : (completados / total) * 100}%`,
+                      }}
                     />
                   </div>
-                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                    {entrenado ? (
-                      <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                        <Check className="h-3.5 w-3.5" /> Hecho
+                  <span
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold tabular-nums',
+                      hecho
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    {hecho && <Check className="h-3.5 w-3.5" />}
+                    {completados}/{total}
+                    {saltados > 0 && (
+                      <span className="font-normal opacity-70">
+                        {' '}
+                        ({saltados} ✗)
                       </span>
-                    ) : (
-                      `${completados}/${total}`
                     )}
                   </span>
                 </div>

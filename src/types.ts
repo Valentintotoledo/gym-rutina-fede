@@ -32,6 +32,8 @@ export interface Exercise {
   step?: number
   /** Marca de bi-serie: ejercicios con la misma clave se hacen juntos */
   biserie?: string
+  /** Aclaración sobre cómo se cuenta el peso (ej "Peso por mancuerna") */
+  pesoNota?: string
 }
 
 export interface Day {
@@ -53,5 +55,9 @@ export interface WeeklyLog {
   pesos: number[] // kg por serie
   reps?: number[] // repeticiones hechas por serie (0 = sin registrar)
   completado: boolean
+  /** true si se marcó explícitamente como "no lo hice" (saltado) */
+  saltado?: boolean
+  /** Nota libre del ejercicio para ese día */
+  nota?: string
   fecha: string // ISO date
 }

@@ -18,22 +18,31 @@ interface EntryView {
   pesos: number[]
   reps: number[]
   completado: boolean
+  saltado: boolean
+  nota: string
   fecha: string
   /** true si el peso proviene de un registro guardado para esa semana */
   registrado: boolean
+}
+
+/** Pesos usados en la semana anterior (más reciente con datos) de un ejercicio. */
+export interface PesosPrevios {
+  semana: number
+  pesos: number[]
 }
 
 interface GymContextValue {
   logs: WeeklyLog[]
   /** Devuelve el registro (con pesos sugeridos si no existe) */
   getEntry: (semana: number, dia: DayId, ejercicio: string) => EntryView
-  /** Cambia el peso de una serie puntual */
+  /** Cambia el peso de una serie puntual. Si propagar=true, replica a las series siguientes. */
   setPesoSerie: (
     semana: number,
     dia: DayId,
     ejercicio: string,
     serie: number,
-    peso: number
+    peso: number,
+    propagar?: boolean
   ) => void
   /** Cambia las repeticiones hechas en una serie puntual */
   setRepSerie: (
@@ -49,6 +58,17 @@ interface GymContextValue {
     ejercicio: string,
     completado: boolean
   ) => void
+  /** Marca / desmarca un ejercicio como "no lo hice" (saltado) */
+  setSaltado: (
+    semana: number,
+    dia: DayId,
+    ejercicio: string,
+    saltado: boolean
+  ) => void
+  /** Guarda la nota libre de un ejercicio */
+  setNota: (semana: number, dia: DayId, ejercicio: string, nota: string) => void
+  /** Pesos de la semana anterior (para mostrar de referencia) */
+  pesosPrevios: (semana: number, ejercicio: string) => PesosPrevios | null
   /** Marca toda la jornada (día/semana) como completada y sella la fecha indicada (o hoy) */
   guardarDia: (semana: number, dia: DayId, fecha?: string) => void
   isDiaCompleto: (semana: number, dia: DayId) => boolean
@@ -161,6 +181,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           pesos: normalizePesos(found.pesos, series, pesoSugerido(semana, ejercicio)),
           reps: normalizePesos(found.reps, series, 0),
           completado: found.completado,
+          saltado: !!found.saltado,
+          nota: found.nota ?? '',
           fecha: found.fecha,
           registrado: true,
         }
@@ -169,11 +191,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
         pesos: normalizePesos(undefined, series, pesoSugerido(semana, ejercicio)),
         reps: normalizePesos(undefined, series, 0),
         completado: false,
+        saltado: false,
+        nota: '',
         fecha: '',
         registrado: false,
       }
     },
     [index, pesoSugerido]
+  )
+
+  /** Pesos usados en la semana anterior más reciente con datos. */
+  const pesosPrevios = useCallback(
+    (semana: number, ejercicio: string): PesosPrevios | null => {
+      for (let w = semana - 1; w >= 1; w--) {
+        for (const day of ROUTINE) {
+          const found = index.get(keyOf(w, day.id, ejercicio))
+          if (found && found.pesos.some((p) => p > 0)) {
+            return { semana: w, pesos: found.pesos }
+          }
+        }
+      }
+      return null
+    },
+    [index]
   )
 
   const upsert = useCallback(
@@ -210,16 +250,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dia: DayId,
       ejercicio: string,
       serie: number,
-      peso: number
+      peso: number,
+      propagar = false
     ) => {
       const ex = getExercise(ejercicio)
       const series = ex?.series ?? 1
       const entry = getEntry(semana, dia, ejercicio)
       const pesos = normalizePesos(entry.pesos, series, 0)
-      if (serie >= 0 && serie < pesos.length) pesos[serie] = Math.max(0, peso)
+      const v = Math.max(0, peso)
+      if (serie >= 0 && serie < pesos.length) {
+        // Al escribir la serie 1 (o cualquiera), se replica a las siguientes
+        const hasta = propagar ? pesos.length : serie + 1
+        for (let j = serie; j < hasta; j++) pesos[j] = v
+      }
+      const hecho = hizoEjercicio(ejercicio, pesos, entry.reps)
       upsert(semana, dia, ejercicio, {
         pesos,
-        completado: hizoEjercicio(ejercicio, pesos, entry.reps),
+        completado: hecho,
+        ...(hecho ? { saltado: false } : {}),
       })
     },
     [getEntry, upsert]
@@ -238,9 +286,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const entry = getEntry(semana, dia, ejercicio)
       const next = normalizePesos(entry.reps, series, 0)
       if (serie >= 0 && serie < next.length) next[serie] = Math.max(0, Math.round(reps))
+      const hecho = hizoEjercicio(ejercicio, entry.pesos, next)
       upsert(semana, dia, ejercicio, {
         reps: next,
-        completado: hizoEjercicio(ejercicio, entry.pesos, next),
+        completado: hecho,
+        ...(hecho ? { saltado: false } : {}),
       })
     },
     [getEntry, upsert]
@@ -250,8 +300,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (semana: number, dia: DayId, ejercicio: string, completado: boolean) => {
       upsert(semana, dia, ejercicio, {
         completado,
+        // Marcar hecho a mano quita el "no lo hice"
+        ...(completado ? { saltado: false } : {}),
         fecha: new Date().toISOString(),
       })
+    },
+    [upsert]
+  )
+
+  const setSaltado = useCallback(
+    (semana: number, dia: DayId, ejercicio: string, saltado: boolean) => {
+      const entry = getEntry(semana, dia, ejercicio)
+      upsert(semana, dia, ejercicio, {
+        saltado,
+        // "No lo hice" fuerza no-completado; al desmarcarlo, recalcula por datos
+        completado: saltado
+          ? false
+          : hizoEjercicio(ejercicio, entry.pesos, entry.reps),
+      })
+    },
+    [getEntry, upsert]
+  )
+
+  const setNota = useCallback(
+    (semana: number, dia: DayId, ejercicio: string, nota: string) => {
+      upsert(semana, dia, ejercicio, { nota })
     },
     [upsert]
   )
@@ -299,6 +372,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPesoSerie,
     setRepSerie,
     setCompletado,
+    setSaltado,
+    setNota,
+    pesosPrevios,
     guardarDia,
     isDiaCompleto,
     resetMock,

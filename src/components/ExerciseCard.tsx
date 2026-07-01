@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Link2, Minus, Plus, Youtube } from 'lucide-react'
+import { Check, Link2, Minus, Plus, X, Youtube, History } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { DayId, Exercise } from '@/types'
 import { cn } from '@/lib/utils'
@@ -55,7 +55,8 @@ export function ExerciseCard({
   semana: number
   dia: DayId
 }) {
-  const { getEntry, setPesoSerie, setRepSerie, setCompletado } = useGym()
+  const { getEntry, setPesoSerie, setRepSerie, setCompletado, setSaltado, setNota, pesosPrevios } =
+    useGym()
   const entry = getEntry(semana, dia, exercise.id)
   const step = exercise.step ?? 2.5
   const unidad: 'kg' | 'reps' =
@@ -63,15 +64,26 @@ export function ExerciseCard({
   // Sólo mostramos el registro de reps en ejercicios de carga (kg)
   const mostrarReps = unidad === 'kg'
   const opts = useMemo(() => repOptions(exercise.repsLabel), [exercise.repsLabel])
+  const previos = pesosPrevios(semana, exercise.id)
+  const saltado = entry.saltado
+
+  // Nota libre (local, se persiste al escribir)
+  const [notaStr, setNotaStr] = useState(entry.nota)
+  useEffect(() => {
+    setNotaStr(entry.nota)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [semana, dia, exercise.id])
 
   return (
     <motion.div
       layout
       className={cn(
         'rounded-2xl border bg-card p-4 shadow-sm transition-colors',
-        entry.completado
-          ? 'border-emerald-500/40 bg-emerald-500/[0.04]'
-          : 'border-border'
+        saltado
+          ? 'border-dashed border-border bg-muted/30 opacity-70'
+          : entry.completado
+            ? 'border-emerald-500/40 bg-emerald-500/[0.04]'
+            : 'border-border'
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -81,7 +93,12 @@ export function ExerciseCard({
               <Link2 className="h-3 w-3" /> Bi-serie
             </span>
           )}
-          <h3 className="text-[15px] font-bold leading-tight">
+          <h3
+            className={cn(
+              'text-[15px] font-bold leading-tight',
+              saltado && 'line-through'
+            )}
+          >
             {exercise.nombre}
           </h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -96,14 +113,25 @@ export function ExerciseCard({
               <span className="ml-1 text-xs">· peso corporal</span>
             )}
           </p>
+          {exercise.pesoNota && (
+            <p className="mt-1 inline-flex rounded-md bg-secondary px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              ⚖ {exercise.pesoNota}
+            </p>
+          )}
           {exercise.nota && (
             <p className="mt-1 text-xs italic leading-snug text-muted-foreground/80">
               {exercise.nota}
             </p>
           )}
+          {previos && (
+            <p className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+              <History className="h-3 w-3" />
+              Sem {previos.semana}: {previos.pesos.map((p) => fmtNum(p) || '0').join(' · ')} {unidad}
+            </p>
+          )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 flex-col items-center gap-1.5">
           <a
             href={youtubeSearch(exercise.nombre)}
             target="_blank"
@@ -113,26 +141,43 @@ export function ExerciseCard({
           >
             <Youtube className="h-5 w-5" />
           </a>
-          <button
-            onClick={() =>
-              setCompletado(semana, dia, exercise.id, !entry.completado)
-            }
-            aria-label="Marcar completado"
-            aria-pressed={entry.completado}
-            className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-all active:scale-95',
-              entry.completado
-                ? 'border-emerald-500 bg-emerald-500 text-white'
-                : 'border-border bg-background text-muted-foreground hover:border-emerald-500/50'
-            )}
-          >
-            <Check className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setSaltado(semana, dia, exercise.id, !saltado)}
+              aria-label="No lo hice"
+              aria-pressed={saltado}
+              title="No lo hice"
+              className={cn(
+                'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-all active:scale-95',
+                saltado
+                  ? 'border-rose-500 bg-rose-500 text-white'
+                  : 'border-border bg-background text-muted-foreground hover:border-rose-500/50'
+              )}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() =>
+                setCompletado(semana, dia, exercise.id, !entry.completado)
+              }
+              aria-label="Marcar completado"
+              aria-pressed={entry.completado}
+              title="Hecho"
+              className={cn(
+                'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-all active:scale-95',
+                entry.completado
+                  ? 'border-emerald-500 bg-emerald-500 text-white'
+                  : 'border-border bg-background text-muted-foreground hover:border-emerald-500/50'
+              )}
+            >
+              <Check className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Series: peso + repeticiones */}
-      <div className="mt-3.5 space-y-2">
+      <div className={cn('mt-3.5 space-y-2', saltado && 'opacity-50')}>
         {entry.pesos.map((peso, i) => (
           <SerieRow
             key={i}
@@ -143,11 +188,25 @@ export function ExerciseCard({
             step={step}
             opts={opts}
             mostrarReps={mostrarReps}
-            onPeso={(v) => setPesoSerie(semana, dia, exercise.id, i, v)}
+            onPeso={(v, propagar) =>
+              setPesoSerie(semana, dia, exercise.id, i, v, propagar)
+            }
             onReps={(v) => setRepSerie(semana, dia, exercise.id, i, v)}
           />
         ))}
       </div>
+
+      {/* Notas del ejercicio */}
+      <textarea
+        value={notaStr}
+        onChange={(e) => {
+          setNotaStr(e.target.value)
+          setNota(semana, dia, exercise.id, e.target.value)
+        }}
+        placeholder="Notas del ejercicio (opcional)…"
+        rows={1}
+        className="mt-2.5 w-full resize-none rounded-lg border border-input bg-background/60 px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
     </motion.div>
   )
 }
@@ -170,7 +229,7 @@ function SerieRow({
   step: number
   opts: number[]
   mostrarReps: boolean
-  onPeso: (peso: number) => void
+  onPeso: (peso: number, propagar: boolean) => void
   onReps: (reps: number) => void
 }) {
   const suffix = unidad === 'reps' ? 'reps' : 'kg'
@@ -185,11 +244,12 @@ function SerieRow({
   const onPesoInput = (raw: string) => {
     const clean = raw.replace(/[^0-9.,]/g, '')
     setPesoStr(clean)
-    onPeso(toNum(clean))
+    // Al escribir el peso, se replica a las series siguientes
+    onPeso(toNum(clean), true)
   }
   const applyDelta = (d: number) => {
     const v = Math.max(0, round((peso || 0) + d))
-    onPeso(v)
+    onPeso(v, false)
     setPesoStr(fmtNum(v))
   }
 
